@@ -75,8 +75,8 @@ def process_audio_async(task_id: str, audio_file_path: str, output_dir: str):
         
         if not result['success']:
             processing_tasks[task_id]['status'] = 'failed'
-            processing_tasks[task_id]['message'] = result['message']
-            processing_tasks[task_id]['error'] = result.get('error', '')
+        processing_tasks[task_id]['message'] = result['message']
+        processing_tasks[task_id]['error'] = result.get('error', '')
         
         # 清理临时上传文件
         if os.path.exists(audio_file_path):
