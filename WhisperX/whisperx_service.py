@@ -2,6 +2,7 @@ import json
 import whisperx
 import os
 import torch
+import gc
 from typing import Dict, Any, Optional
 
 # 导入说话人分离功能
@@ -21,6 +22,26 @@ class WhisperXService:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.project_root = os.path.dirname(script_dir)
         
+    def _cleanup_gpu_resources(self, model=None):
+        """
+        清理GPU资源，防止内存溢出
+        """
+        try:
+            # 删除模型引用
+            if model is not None:
+                del model
+            
+            # 强制垃圾回收
+            gc.collect()
+            
+            # 清空CUDA缓存
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                
+            print("GPU resources cleaned up successfully")
+        except Exception as e:
+            print(f"Warning: Failed to cleanup GPU resources: {e}")
+        
     def process_audio(self, audio_file_path: str, output_dir: Optional[str] = None, 
                      progress_callback=None) -> Dict[str, Any]:
         """
@@ -34,6 +55,10 @@ class WhisperXService:
         Returns:
             包含处理结果的字典
         """
+        model = None
+        model_a = None
+        diarize_model = None
+        
         try:
             # 检查音频文件是否存在
             if not os.path.exists(audio_file_path):
@@ -75,6 +100,10 @@ class WhisperXService:
             if progress_callback:
                 progress_callback(1, "基础转录已完成", transcription_data)
             
+            # 释放步骤1的GPU资源
+            self._cleanup_gpu_resources(model)
+            model = None
+            
             # 步骤2: 对齐处理
             print("Step 2: Aligning transcription with audio...")
             if progress_callback:
@@ -96,6 +125,10 @@ class WhisperXService:
             
             if progress_callback:
                 progress_callback(2, "单词级对齐已完成", wordstamps_data)
+            
+            # 释放步骤2的GPU资源
+            self._cleanup_gpu_resources(model_a)
+            model_a = None
             
             # 步骤3: 说话人分离
             print("Step 3: Performing speaker diarization...")
@@ -135,6 +168,14 @@ class WhisperXService:
             if progress_callback:
                 progress_callback(3, "说话人分离已完成", speaker_data)
             
+            # 释放步骤3的GPU资源
+            self._cleanup_gpu_resources(diarize_model)
+            diarize_model = None
+            
+            # 最终清理
+            del audio
+            self._cleanup_gpu_resources()
+            
             print("All processing completed successfully!")
             
             # 返回处理结果
@@ -156,6 +197,12 @@ class WhisperXService:
             }
             
         except Exception as e:
+            # 异常情况下也要清理GPU资源
+            print(f"Error occurred, cleaning up GPU resources...")
+            self._cleanup_gpu_resources(model)
+            self._cleanup_gpu_resources(model_a)
+            self._cleanup_gpu_resources(diarize_model)
+            
             error_msg = f"Error during processing: {str(e)}"
             print(error_msg)
             if progress_callback:
