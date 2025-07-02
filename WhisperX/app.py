@@ -33,6 +33,11 @@ def allowed_file(filename):
 def progress_callback(task_id: str, step: int, message: str, data: Optional[Dict[str, Any]] = None):
     """
     进度回调函数，用于更新任务状态
+    step参数说明：
+    - 负数：错误
+    - 1x: 基础转录相关 (10=开始, 11=完成)
+    - 2x: 单词级对齐相关 (20=开始, 21=完成)  
+    - 3x: 说话人分离相关 (30=开始, 31=完成)
     """
     if task_id not in processing_tasks:
         return
@@ -42,23 +47,51 @@ def progress_callback(task_id: str, step: int, message: str, data: Optional[Dict
     if step == -1:  # 错误
         task['status'] = 'failed'
         task['message'] = message
-    elif step == 1:  # 基础转录完成
+    elif step == 10:  # 基础转录开始
+        task['status'] = 'transcription_processing'
+        task['message'] = message
+    elif step == 11:  # 基础转录完成
         task['status'] = 'transcription_completed'
         task['message'] = message
         task['transcription'] = data
         task['available_files'] = ['transcription']
-    elif step == 2:  # 单词级对齐完成
-        task['status'] = 'alignment_completed' 
+    elif step == 20:  # 单词级对齐开始
+        task['status'] = 'alignment_processing'
         task['message'] = message
-        task['wordstamps'] = data
-        task['available_files'] = ['transcription', 'wordstamps']
-    elif step == 3:  # 说话人分离完成
+    elif step == 21:  # 单词级对齐完成
+        # 检查是否启用了单词级时间戳
+        enable_word_timestamps = task.get('options', {}).get('enable_word_timestamps', True)
+        if enable_word_timestamps and data:
+            task['status'] = 'alignment_completed' 
+            task['message'] = message
+            task['wordstamps'] = data
+            task['available_files'] = ['transcription', 'wordstamps']
+        else:
+            task['status'] = 'alignment_completed'
+            task['message'] = message
+            task['available_files'] = ['transcription']
+    elif step == 30:  # 说话人分离开始
+        task['status'] = 'diarization_processing'
+        task['message'] = message
+    elif step == 31:  # 说话人分离完成
         task['status'] = 'completed'
         task['message'] = message
-        task['speaker_segments'] = data
-        task['available_files'] = ['transcription', 'wordstamps', 'speaker_segments', 'diarization']
+        
+        # 根据启用的选项设置可用文件和数据
+        enable_word_timestamps = task.get('options', {}).get('enable_word_timestamps', True)
+        enable_speaker_diarization = task.get('options', {}).get('enable_speaker_diarization', True)
+        
+        available_files = ['transcription']
+        if enable_word_timestamps:
+            available_files.append('wordstamps')
+        if enable_speaker_diarization and enable_word_timestamps and data:
+            task['speaker_segments'] = data
+            available_files.extend(['speaker_segments', 'diarization'])
+            
+        task['available_files'] = available_files
 
-def process_audio_async(task_id: str, audio_file_path: str, output_dir: str):
+def process_audio_async(task_id: str, audio_file_path: str, output_dir: str, 
+                       enable_word_timestamps: bool = True, enable_speaker_diarization: bool = False):
     """
     异步处理音频文件
     """
@@ -71,7 +104,13 @@ def process_audio_async(task_id: str, audio_file_path: str, output_dir: str):
             progress_callback(task_id, step, message, data)
         
         # 调用WhisperX服务处理音频
-        result = whisperx_service.process_audio(audio_file_path, output_dir, callback)
+        result = whisperx_service.process_audio(
+            audio_file_path, 
+            output_dir, 
+            callback,
+            enable_word_timestamps=enable_word_timestamps,
+            enable_speaker_diarization=enable_speaker_diarization
+        )
         
         if not result['success']:
             processing_tasks[task_id]['status'] = 'failed'
@@ -124,6 +163,10 @@ def process_audio():
                 'message': f'File type not allowed. Supported types: {", ".join(ALLOWED_EXTENSIONS)}'
             }), 400
         
+        # 获取处理选项
+        enable_word_timestamps = request.form.get('enable_word_timestamps', 'true').lower() == 'true'
+        enable_speaker_diarization = request.form.get('enable_speaker_diarization', 'false').lower() == 'true'
+        
         # 生成任务ID
         task_id = str(uuid.uuid4())
         
@@ -149,13 +192,17 @@ def process_audio():
             'message': 'Task queued for processing',
             'created_at': time.time(),
             'filename': filename,
-            'output_dir': output_dir
+            'output_dir': output_dir,
+            'options': {
+                'enable_word_timestamps': enable_word_timestamps,
+                'enable_speaker_diarization': enable_speaker_diarization
+            }
         }
         
         # 启动异步处理
         thread = threading.Thread(
             target=process_audio_async,
-            args=(task_id, upload_path, output_dir)
+            args=(task_id, upload_path, output_dir, enable_word_timestamps, enable_speaker_diarization)
         )
         thread.daemon = True
         thread.start()
@@ -197,11 +244,11 @@ def get_task_status(task_id):
     }
     
     # 根据状态包含对应的数据
-    if task['status'] in ['transcription_completed', 'alignment_completed', 'completed']:
+    if task['status'] in ['transcription_completed', 'alignment_processing', 'alignment_completed', 'diarization_processing', 'completed']:
         if 'transcription' in task:
             response['transcription'] = task['transcription']
     
-    if task['status'] in ['alignment_completed', 'completed']:
+    if task['status'] in ['alignment_completed', 'diarization_processing', 'completed']:
         if 'wordstamps' in task:
             response['wordstamps'] = task['wordstamps']
     
