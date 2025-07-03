@@ -15,6 +15,46 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// createBlueLMApp 创建蓝心大模型应用实例，考虑配置优先级
+// 优先级：前端传递的配置 > 系统环境变量 > config.yaml文件
+func createBlueLMApp(frontendAppID, frontendAppKey string, cfg *config.Config) *vivo.Vivo {
+	// 1. 优先使用前端传递的配置
+	if frontendAppID != "" && frontendAppKey != "" {
+		utils.Log.Infof("Using frontend provided BlueLM config")
+		return vivo.NewVivoAIGC(vivo.Config{
+			AppID:  frontendAppID,
+			AppKey: frontendAppKey,
+		})
+	}
+
+	// 2. 使用系统环境变量
+	envAppID := os.Getenv("BLUELM_APP_ID")
+	envAppKey := os.Getenv("BLUELM_APP_KEY")
+	if envAppID != "" && envAppKey != "" {
+		utils.Log.Infof("Using environment variables for BlueLM config")
+		return vivo.NewVivoAIGC(vivo.Config{
+			AppID:  envAppID,
+			AppKey: envAppKey,
+		})
+	}
+
+	// 3. 使用config.yaml文件中的配置
+	if cfg.VivoAI.AppID != "" && cfg.VivoAI.AppKey != "" {
+		utils.Log.Infof("Using config.yaml for BlueLM config")
+		return vivo.NewVivoAIGC(vivo.Config{
+			AppID:  cfg.VivoAI.AppID,
+			AppKey: cfg.VivoAI.AppKey,
+		})
+	}
+
+	// 如果都没有配置，返回空配置的应用实例（可能会失败）
+	utils.Log.Warnf("No BlueLM configuration found, using empty config")
+	return vivo.NewVivoAIGC(vivo.Config{
+		AppID:  "",
+		AppKey: "",
+	})
+}
+
 // TranscriptionHandler 处理长语音转写请求
 func TranscriptionHandler(app *vivo.Vivo, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -24,8 +64,16 @@ func TranscriptionHandler(app *vivo.Vivo, cfg *config.Config) gin.HandlerFunc {
 			utils.AbortWithBadRequest(c, err, "Failed to save uploaded file")
 			return
 		}
+
+		// 获取蓝心大模型配置（前端传递的优先级最高）
+		appID := c.PostForm("app_id")
+		appKey := c.PostForm("app_key")
+
+		// 创建蓝心大模型应用实例，考虑配置优先级
+		transcriptionApp := createBlueLMApp(appID, appKey, cfg)
+
 		//调用蓝心大模型长语音转写
-		trans := app.NewTranscription(uploadFilePath)
+		trans := transcriptionApp.NewTranscription(uploadFilePath)
 		e := trans.Upload()
 		if e != nil {
 			utils.AbortWithInternalServerError(c, e)
@@ -44,7 +92,7 @@ func TranscriptionHandler(app *vivo.Vivo, cfg *config.Config) gin.HandlerFunc {
 		if file, err := c.FormFile("file"); err == nil {
 			filename = file.Filename
 		}
-		
+
 		// 创建任务记录
 		GlobalTaskManager.CreateTask(taskID, filename)
 		GlobalTaskManager.UpdateTaskStatus(taskID, TaskStatusProcessing, "Processing started")

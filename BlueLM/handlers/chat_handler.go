@@ -4,19 +4,22 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/AimMetal-jy/AuraLab-backend/BlueLM/config"
 	"github.com/AimMetal-jy/AuraLab-backend/BlueLM/utils"
 	"github.com/dingdinglz/vivo"
 	"github.com/gin-gonic/gin"
 )
 
 // ChatHandler handles the AI chat requests.
-func ChatHandler(app *vivo.Vivo) gin.HandlerFunc {
+func ChatHandler(app *vivo.Vivo, cfg *config.Config) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// 定义请求体结构
 		var requestBody struct {
 			Message         string             `json:"message"`
 			SessionID       string             `json:"session_id,omitempty"`
 			HistoryMessages []vivo.ChatMessage `json:"history_messages,omitempty"`
+			AppID           string             `json:"app_id,omitempty"`  // 前端传递的AppID
+			AppKey          string             `json:"app_key,omitempty"` // 前端传递的AppKey
 		}
 
 		// 解析JSON请求
@@ -30,6 +33,9 @@ func ChatHandler(app *vivo.Vivo) gin.HandlerFunc {
 			utils.AbortWithBadRequest(ctx, nil, "Message cannot be empty")
 			return
 		}
+
+		// 创建蓝心大模型应用实例，考虑配置优先级
+		chatApp := createBlueLMApp(requestBody.AppID, requestBody.AppKey, cfg)
 
 		// 生成或使用现有的会话ID
 		sessionID := requestBody.SessionID
@@ -51,7 +57,7 @@ func ChatHandler(app *vivo.Vivo) gin.HandlerFunc {
 		})
 
 		// 调用蓝心大模型
-		res, err := app.Chat(vivo.GenerateSessionID(), sessionID, historyMessages, nil)
+		res, err := chatApp.Chat(vivo.GenerateSessionID(), sessionID, historyMessages, nil)
 		if err != nil {
 			utils.AbortWithInternalServerError(ctx, err)
 			return

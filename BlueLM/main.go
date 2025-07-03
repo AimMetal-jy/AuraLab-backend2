@@ -36,17 +36,17 @@ func main() {
 	// Register handlers
 	// Health check endpoint
 	ginServer.GET("/bluelm/health", handlers.HealthHandler)
-	
+
 	// Legacy endpoints (保持向后兼容)
 	ginServer.POST("/bluelm/tts", handlers.TTSHandler(app, cfg))
 	ginServer.POST("/bluelm/transcription", handlers.TranscriptionHandler(app, cfg))
-	ginServer.POST("/bluelm/chat", handlers.ChatHandler(app))
+	ginServer.POST("/bluelm/chat", handlers.ChatHandler(app, cfg))
 	ginServer.POST("/whisperx", handlers.WhisperXHandler(cfg))
 	ginServer.GET("/bluelm/transcription/status/:task_id", handlers.TranscriptionStatusHandler(cfg))
 	ginServer.GET("/bluelm/transcription/download/:task_id", handlers.TranscriptionDownloadHandler(cfg))
 	ginServer.GET("/bluelm/transcription/tasks", handlers.TranscriptionTasksHandler(cfg))
 	// WhisperX状态和下载接口现在通过统一API提供
-	
+
 	// 统一的模型API接口
 	ginServer.POST("/model", handlers.UnifiedModelHandler(app, cfg))
 	ginServer.GET("/model", handlers.UnifiedModelHandler(app, cfg))

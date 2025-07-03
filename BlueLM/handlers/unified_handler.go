@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/dingdinglz/vivo"
+	"github.com/gin-gonic/gin"
 
 	"github.com/AimMetal-jy/AuraLab-backend/BlueLM/config"
 	"github.com/AimMetal-jy/AuraLab-backend/BlueLM/utils"
@@ -55,8 +55,8 @@ func UnifiedModelHandler(app *vivo.Vivo, cfg *config.Config) gin.HandlerFunc {
 func handleWhisperXRequest(c *gin.Context, cfg *config.Config, action string) {
 	switch action {
 	case "submit":
-		// 调用原有的WhisperX提交处理器
-		WhisperXHandler(cfg)(c)
+		// 调用增强的WhisperX提交处理器
+		EnhancedWhisperXHandler(cfg)(c)
 	case "status":
 		// 处理状态查询
 		taskID := c.Query("task_id")
@@ -90,7 +90,7 @@ func handleWhisperXRequest(c *gin.Context, cfg *config.Config, action string) {
 func handleBlueLMRequest(c *gin.Context, app *vivo.Vivo, cfg *config.Config, action string) {
 	switch action {
 	case "submit":
-		// 调用原有的BlueLM转录处理器
+		// 调用支持配置优先级的BlueLM转录处理器
 		TranscriptionHandler(app, cfg)(c)
 	case "status":
 		// 处理状态查询
@@ -164,7 +164,7 @@ func handleWhisperXDownload(c *gin.Context, cfg *config.Config, taskID, fileName
 func handleWhisperXList(c *gin.Context, _ *config.Config) {
 	// WhisperX暂时没有列表功能，返回提示信息
 	c.JSON(http.StatusNotImplemented, gin.H{
-		"error": "List functionality not implemented for WhisperX",
+		"error":   "List functionality not implemented for WhisperX",
 		"message": "WhisperX service does not support task listing",
 	})
 }
