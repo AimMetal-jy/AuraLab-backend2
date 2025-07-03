@@ -22,6 +22,111 @@ class WhisperXService:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.project_root = os.path.dirname(script_dir)
         
+        # 支持的模型列表及其描述
+        self.supported_models = {
+            "tiny": {
+                "name": "tiny",
+                "description": "最小模型，速度最快，准确度较低",
+                "parameters": "39M",
+                "vram": "~1GB",
+                "relative_speed": "~10x",
+                "recommended_for": "快速转录，资源受限环境"
+            },
+            "tiny.en": {
+                "name": "tiny.en",
+                "description": "英文专用版本，比多语言版本更准确",
+                "parameters": "39M",
+                "vram": "~1GB",
+                "relative_speed": "~10x",
+                "recommended_for": "英文音频的快速转录"
+            },
+            "base": {
+                "name": "base",
+                "description": "基础模型，速度和准确度平衡",
+                "parameters": "74M",
+                "vram": "~1GB",
+                "relative_speed": "~7x",
+                "recommended_for": "一般用途，速度和质量兼顾"
+            },
+            "base.en": {
+                "name": "base.en",
+                "description": "英文专用版本，适合英文音频",
+                "parameters": "74M",
+                "vram": "~1GB",
+                "relative_speed": "~7x",
+                "recommended_for": "英文音频的平衡选择"
+            },
+            "small": {
+                "name": "small",
+                "description": "小型模型，较好的准确度和速度",
+                "parameters": "244M",
+                "vram": "~2GB",
+                "relative_speed": "~4x",
+                "recommended_for": "推荐选择，质量和速度的最佳平衡"
+            },
+            "small.en": {
+                "name": "small.en",
+                "description": "英文专用版本，质量更好",
+                "parameters": "244M",
+                "vram": "~2GB",
+                "relative_speed": "~4x",
+                "recommended_for": "英文音频的推荐选择"
+            },
+            "medium": {
+                "name": "medium",
+                "description": "中型模型，高准确度但速度较慢",
+                "parameters": "769M",
+                "vram": "~5GB",
+                "relative_speed": "~2x",
+                "recommended_for": "高质量转录，专业应用"
+            },
+            "medium.en": {
+                "name": "medium.en",
+                "description": "英文专用版本，专业级质量",
+                "parameters": "769M",
+                "vram": "~5GB",
+                "relative_speed": "~2x",
+                "recommended_for": "英文音频的专业级转录"
+            },
+            "large": {
+                "name": "large",
+                "description": "大型模型，最高准确度但速度最慢",
+                "parameters": "1550M",
+                "vram": "~10GB",
+                "relative_speed": "1x",
+                "recommended_for": "最高质量要求，充足计算资源"
+            },
+            "turbo": {
+                "name": "turbo",
+                "description": "优化版本，速度快且质量高（不支持翻译）",
+                "parameters": "809M",
+                "vram": "~6GB",
+                "relative_speed": "~8x",
+                "recommended_for": "高性能转录，不需要翻译功能"
+            }
+        }
+        
+    def get_model_info(self) -> Dict[str, Any]:
+        """
+        获取支持的模型信息
+        """
+        return {
+            "supported_models": self.supported_models,
+            "default_model": "small",
+            "device": self.device,
+            "compute_type": self.compute_type
+        }
+    
+    def _validate_model(self, model_name: str) -> str:
+        """
+        验证模型名称，如果无效则返回默认模型
+        """
+        if model_name in self.supported_models:
+            return model_name
+        else:
+            print(f"Warning: Model '{model_name}' not supported. Using default model 'small'")
+            return "small"
+        
     def _cleanup_gpu_resources(self, model=None):
         """
         清理GPU资源，防止内存溢出
@@ -44,7 +149,8 @@ class WhisperXService:
         
     def process_audio(self, audio_file_path: str, output_dir: Optional[str] = None, 
                      progress_callback=None, enable_word_timestamps: bool = True, 
-                     enable_speaker_diarization: bool = False) -> Dict[str, Any]:
+                     enable_speaker_diarization: bool = False, model_name: str = "small",
+                     language: Optional[str] = None, compute_type: Optional[str] = None) -> Dict[str, Any]:
         """
         处理音频文件，执行转录、对齐和说话人分离
         
@@ -54,6 +160,9 @@ class WhisperXService:
             progress_callback: 进度回调函数
             enable_word_timestamps: 是否生成单词级时间戳
             enable_speaker_diarization: 是否进行说话人分离
+            model_name: 使用的模型名称（tiny, base, small, medium, large, turbo及对应.en版本）
+            language: 音频语言（可选，自动检测）
+            compute_type: 计算类型（float16, int8等，可选）
             
         Returns:
             包含处理结果的字典
@@ -63,6 +172,12 @@ class WhisperXService:
         diarize_model = None
         
         try:
+            # 验证和处理参数
+            model_name = self._validate_model(model_name)
+            
+            # 使用传入的compute_type或默认值
+            used_compute_type = compute_type if compute_type is not None else self.compute_type
+            
             # 检查音频文件是否存在
             if not os.path.exists(audio_file_path):
                 raise FileNotFoundError(f"Audio file not found: {audio_file_path}")
@@ -80,14 +195,20 @@ class WhisperXService:
             speaker_segments_path = os.path.join(output_dir, "speaker_segments.json")
             
             # 步骤1: 基础转录
-            print("Step 1: Loading model and transcribing audio...")
+            print(f"Step 1: Loading model '{model_name}' and transcribing audio...")
             if progress_callback:
-                progress_callback(10, "正在进行基础转录...")
+                progress_callback(10, f"正在加载模型 '{model_name}' 进行基础转录...")
                 
-            model = whisperx.load_model("small", self.device, compute_type=self.compute_type)
+            model = whisperx.load_model(model_name, self.device, compute_type=used_compute_type)
             
             audio = whisperx.load_audio(audio_file_path)
-            result = model.transcribe(audio, batch_size=self.batch_size)
+            
+            # 转录参数
+            transcribe_kwargs = {"batch_size": self.batch_size}
+            if language is not None:
+                transcribe_kwargs["language"] = language
+                
+            result = model.transcribe(audio, **transcribe_kwargs)
             
             # 保存基础转录结果
             transcription_data = {
@@ -227,7 +348,11 @@ class WhisperXService:
                 "output_files": output_files,
                 "processing_options": {
                     "word_timestamps_enabled": enable_word_timestamps,
-                    "speaker_diarization_enabled": enable_speaker_diarization and enable_word_timestamps
+                    "speaker_diarization_enabled": enable_speaker_diarization and enable_word_timestamps,
+                    "model_name": model_name,
+                    "language": language,
+                    "compute_type": used_compute_type,
+                    "model_info": self.supported_models.get(model_name, {})
                 }
             }
             

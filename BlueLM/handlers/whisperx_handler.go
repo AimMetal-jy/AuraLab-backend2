@@ -54,6 +54,7 @@ func EnhancedWhisperXHandler(cfg *config.Config) gin.HandlerFunc {
 		params.EnableWordTimestamps = c.PostForm("enable_word_timestamps") == "true"
 		params.EnableSpeakerDiarization = c.PostForm("enable_speaker_diarization") == "true"
 		params.HuggingFaceToken = c.PostForm("huggingface_token")
+		params.ModelName = c.PostForm("model_name")
 
 		// 3. 异步调用增强的WhisperX服务
 		taskID, err := startEnhancedWhisperXService(uploadFilePath, cfg, params)
@@ -74,6 +75,7 @@ type WhisperXParams struct {
 	EnableWordTimestamps     bool   `json:"enable_word_timestamps"`
 	EnableSpeakerDiarization bool   `json:"enable_speaker_diarization"`
 	HuggingFaceToken         string `json:"huggingface_token,omitempty"`
+	ModelName                string `json:"model_name,omitempty"`
 }
 
 // startWhisperXService 启动 WhisperX 服务并返回任务 ID
@@ -224,6 +226,9 @@ func startEnhancedWhisperXService(filePath string, cfg *config.Config, params Wh
 	}
 	if params.HuggingFaceToken != "" {
 		writer.WriteField("huggingface_token", params.HuggingFaceToken)
+	}
+	if params.ModelName != "" {
+		writer.WriteField("model_name", params.ModelName)
 	}
 
 	// 关闭 writer

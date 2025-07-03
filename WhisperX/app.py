@@ -91,7 +91,9 @@ def progress_callback(task_id: str, step: int, message: str, data: Optional[Dict
         task['available_files'] = available_files
 
 def process_audio_async(task_id: str, audio_file_path: str, output_dir: str, 
-                       enable_word_timestamps: bool = True, enable_speaker_diarization: bool = False):
+                       enable_word_timestamps: bool = True, enable_speaker_diarization: bool = False,
+                       model_name: str = "small", language: Optional[str] = None, 
+                       compute_type: Optional[str] = None):
     """
     异步处理音频文件
     """
@@ -109,7 +111,10 @@ def process_audio_async(task_id: str, audio_file_path: str, output_dir: str,
             output_dir, 
             callback,
             enable_word_timestamps=enable_word_timestamps,
-            enable_speaker_diarization=enable_speaker_diarization
+            enable_speaker_diarization=enable_speaker_diarization,
+            model_name=model_name,
+            language=language,
+            compute_type=compute_type
         )
         
         if not result['success']:
@@ -136,6 +141,25 @@ def health_check():
         'message': 'WhisperX service is running',
         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
     })
+
+@app.route('/whisperx/models', methods=['GET'])
+def get_models():
+    """
+    获取支持的模型信息
+    """
+    try:
+        model_info = whisperx_service.get_model_info()
+        return jsonify({
+            'success': True,
+            'message': 'Models retrieved successfully',
+            'data': model_info
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Failed to retrieve models: {str(e)}',
+            'error': str(e)
+        }), 500
 
 @app.route('/whisperx/process', methods=['POST'])
 def process_audio():
@@ -166,6 +190,9 @@ def process_audio():
         # 获取处理选项
         enable_word_timestamps = request.form.get('enable_word_timestamps', 'true').lower() == 'true'
         enable_speaker_diarization = request.form.get('enable_speaker_diarization', 'false').lower() == 'true'
+        model_name = request.form.get('model_name', 'small')
+        language = request.form.get('language', None)
+        compute_type = request.form.get('compute_type', None)
         
         # 生成任务ID
         task_id = str(uuid.uuid4())
@@ -195,14 +222,18 @@ def process_audio():
             'output_dir': output_dir,
             'options': {
                 'enable_word_timestamps': enable_word_timestamps,
-                'enable_speaker_diarization': enable_speaker_diarization
+                'enable_speaker_diarization': enable_speaker_diarization,
+                'model_name': model_name,
+                'language': language,
+                'compute_type': compute_type
             }
         }
         
         # 启动异步处理
         thread = threading.Thread(
             target=process_audio_async,
-            args=(task_id, upload_path, output_dir, enable_word_timestamps, enable_speaker_diarization)
+            args=(task_id, upload_path, output_dir, enable_word_timestamps, enable_speaker_diarization,
+                  model_name, language, compute_type)
         )
         thread.daemon = True
         thread.start()

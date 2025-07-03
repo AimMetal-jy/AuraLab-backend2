@@ -81,8 +81,11 @@ func handleWhisperXRequest(c *gin.Context, cfg *config.Config, action string) {
 	case "list":
 		// 处理任务列表查询
 		handleWhisperXList(c, cfg)
+	case "models":
+		// 处理模型信息查询
+		handleWhisperXModels(c, cfg)
 	default:
-		utils.AbortWithBadRequest(c, nil, "Unsupported action for WhisperX. Supported actions: submit, status, download, list")
+		utils.AbortWithBadRequest(c, nil, "Unsupported action for WhisperX. Supported actions: submit, status, download, list, models")
 	}
 }
 
@@ -167,6 +170,25 @@ func handleWhisperXList(c *gin.Context, _ *config.Config) {
 		"error":   "List functionality not implemented for WhisperX",
 		"message": "WhisperX service does not support task listing",
 	})
+}
+
+func handleWhisperXModels(c *gin.Context, cfg *config.Config) {
+	// 直接调用WhisperX服务的模型信息API
+	modelsURL := fmt.Sprintf("%s/whisperx/models", cfg.WhisperX.URL)
+	resp, err := http.Get(modelsURL)
+	if err != nil {
+		utils.AbortWithInternalServerError(c, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		utils.AbortWithInternalServerError(c, err)
+		return
+	}
+
+	c.Data(resp.StatusCode, "application/json", body)
 }
 
 // BlueLM相关的具体处理函数
