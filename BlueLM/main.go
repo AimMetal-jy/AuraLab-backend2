@@ -51,6 +51,13 @@ func main() {
 	ginServer.POST("/model", handlers.UnifiedModelHandler(app, cfg))
 	ginServer.GET("/model", handlers.UnifiedModelHandler(app, cfg))
 
+	// 翻译接口
+	ginServer.POST("/translate", handlers.TranslationHandler)
+	ginServer.GET("/translate/languages", handlers.GetSupportedLanguagesHandler)
+
+	// 翻译AI评估接口
+	ginServer.POST("/translate/evaluate", handlers.TranslationEvaluationHandler(app, cfg))
+
 	fmt.Println("服务启动成功，监听端口", cfg.Server.Port)
 	ginServer.Run(cfg.Server.Port)
 }
