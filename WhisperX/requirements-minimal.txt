@@ -1,0 +1,23 @@
+# WhisperX 最小化依赖
+# 仅包含核心必需组件
+
+# PyTorch (根据您的CUDA版本选择)
+torch>=2.5.1
+torchaudio>=2.5.1
+
+# WhisperX 核心
+whisperx>=3.4.2
+
+# Web 框架
+Flask>=2.3.0
+
+# 基础数据处理
+numpy>=2.0.2
+pandas>=2.2.3
+
+# 音频处理基础
+librosa>=0.10.0
+soundfile>=0.12.1
+
+# NLP基础
+transformers>=4.48.0 

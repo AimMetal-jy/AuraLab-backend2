@@ -1,7 +1,57 @@
-flask==2.3.3
-werkzeug==2.3.7
-torch
-torchaudio
-numpy
-pandas
-whisperx
+# WhisperX Requirements
+# 基于 m-bain/whisperx@3.4.2 版本
+
+# Core Dependencies
+torch>=2.5.1
+torchaudio>=2.5.1
+torchvision>=0.20.1
+# 最好安装CUDA版本的 pytorch 否则运行较慢
+# 如 pip install torch torchvision torchaudio -f https://mirrors.aliyun.com/pytorch-wheels/cu128
+
+# WhisperX Core
+whisperx>=3.4.2
+faster-whisper>=1.1.1
+ctranslate2<4.5.0
+
+# Audio Processing
+pyannote-audio>=3.3.2
+librosa>=0.10.0
+soundfile>=0.12.1
+
+# NLP & Text Processing  
+nltk>=3.9.1
+transformers>=4.48.0
+
+# Data & Computing
+numpy>=2.0.2
+pandas>=2.2.3
+onnxruntime>=1.19
+
+# Web Framework (for Flask API)
+Flask>=2.3.0
+Werkzeug>=2.3.0
+
+# GPU Acceleration (optional, based on CUDA availability)
+# Uncomment if using CUDA:
+# torch-audio-cuda
+# torchaudio-cuda
+
+# Development & Utilities
+setuptools>=68.0.0
+wheel>=0.40.0
+pip>=23.0.0
+
+# Optional: For enhanced performance
+# numba>=0.57.0
+# jax>=0.4.0
+# jaxlib>=0.4.0
+
+# System Dependencies Notes:
+# - ffmpeg (system installation required)
+# - CUDA toolkit (for GPU support)
+# - cuDNN (for GPU acceleration)
+#
+# Install system dependencies:
+# Ubuntu/Debian: sudo apt install ffmpeg libcudnn8 libcudnn8-dev
+# macOS: brew install ffmpeg
+# Windows: Download ffmpeg and add to PATH 
