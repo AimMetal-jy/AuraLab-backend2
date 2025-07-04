@@ -58,6 +58,12 @@ func main() {
 	// 翻译AI评估接口
 	ginServer.POST("/translate/evaluate", handlers.TranslationEvaluationHandler(app, cfg))
 
+	// OCR接口
+	ginServer.POST("/ocr", handlers.OCRHandler(app, cfg))
+
+	// 测试接口
+	ginServer.GET("/test", handlers.TestHandler)
+
 	fmt.Println("服务启动成功，监听端口", cfg.Server.Port)
 	ginServer.Run(cfg.Server.Port)
 }
