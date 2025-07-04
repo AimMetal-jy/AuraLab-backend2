@@ -1,6 +1,505 @@
-# AuraLab-backend
+# AuraLab Backend - AI音频处理后端服务
 
-欢迎使用 AuraLab-backend，这是一个集成了 Go 和 Python 微服务的后端系统，旨在提供强大的 AI 功能，包括语音处理和大型语言模型交互。
+AuraLab Backend是一个基于微服务架构的AI音频处理后端系统，集成了Go和Python服务，为AuraLab前端应用提供强大的AI功能支持。
+
+## 🏗️ 系统架构
+
+```
+AuraLab Backend
+├── BlueLM/              # Go微服务 (主服务网关)
+│   ├── 文字转语音 (TTS)
+│   ├── AI对话服务
+│   ├── 多模态聊天
+│   ├── 翻译服务
+│   ├── OCR识别
+│   └── API网关
+└── WhisperX/            # Python微服务 (语音处理)
+    ├── 高精度语音转录
+    ├── 单词级时间戳
+    ├── 说话人分离
+    └── 批处理推理
+```
+
+## 🌟 主要功能
+
+### 🎯 BlueLM服务 (Go)
+- **文字转语音 (TTS)**: 基于vivo AI平台的高质量语音合成
+- **AI对话**: 智能聊天和问答功能
+- **多模态聊天**: 支持文本和图像的混合对话
+- **实时翻译**: 多语言文本翻译服务
+- **OCR识别**: 图像文字识别和提取
+- **API网关**: 统一的服务入口和路由管理
+
+### 🎙️ WhisperX服务 (Python)
+- **高精度转录**: 基于WhisperX的语音识别
+- **单词级时间戳**: 精确到单词的时间对齐
+- **说话人分离**: 多说话人场景的语音分离
+- **批处理推理**: 高效的批量音频处理
+- **多格式支持**: wav, mp3, mp4, avi, mov, flac, m4a
+- **异步处理**: 支持长音频的后台处理
+
+## 🛠️ 技术栈
+
+### BlueLM服务
+- **语言**: Go 1.24.1
+- **框架**: Gin Web Framework
+- **AI平台**: vivo AI SDK
+- **中间件**: CORS, 日志记录
+- **配置**: YAML配置文件
+
+### WhisperX服务
+- **语言**: Python 3.8+
+- **框架**: Flask
+- **AI模型**: WhisperX 3.4.2+
+- **音频处理**: librosa, soundfile
+- **深度学习**: PyTorch, transformers
+- **说话人分离**: pyannote-audio
+
+## 📋 系统要求
+
+### 硬件要求
+- **CPU**: 4核心以上推荐
+- **内存**: 8GB RAM (推荐16GB)
+- **存储**: 10GB可用空间
+- **GPU**: NVIDIA GPU (可选，用于加速推理)
+
+### 软件要求
+- **操作系统**: Linux/Windows/macOS
+- **Go**: 1.24.1或更高版本
+- **Python**: 3.8-3.11
+- **FFmpeg**: 音频处理依赖
+- **CUDA**: GPU加速 (可选)
+
+## 🚀 快速开始
+
+### 环境准备
+
+1. **安装Go环境**
+   ```bash
+   # 下载并安装Go 1.24.1+
+   wget https://golang.org/dl/go1.24.1.linux-amd64.tar.gz
+   sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
+   export PATH=$PATH:/usr/local/go/bin
+   ```
+
+2. **安装Python环境**
+   ```bash
+   # 推荐使用conda管理Python环境
+   conda create -n auralab python=3.10
+   conda activate auralab
+   ```
+
+3. **安装系统依赖**
+   ```bash
+   # Ubuntu/Debian
+   sudo apt update
+   sudo apt install ffmpeg libcudnn8 libcudnn8-dev
+   
+   # macOS
+   brew install ffmpeg
+   
+   # Windows
+   # 下载ffmpeg并添加到PATH
+   ```
+
+### BlueLM服务部署
+
+1. **进入BlueLM目录**
+   ```bash
+   cd AuraLab-backend/BlueLM
+   ```
+
+2. **安装Go依赖**
+   ```bash
+   go mod download
+   go mod tidy
+   ```
+
+3. **配置服务**
+   ```bash
+   # 复制配置文件模板
+   cp config.yaml.example config.yaml
+   
+   # 编辑配置文件
+   nano config.yaml
+   ```
+
+4. **配置vivo AI凭据**
+   ```yaml
+   vivo_ai:
+     app_id: "YOUR_VIVO_APP_ID"     # 替换为真实的App ID
+     app_key: "YOUR_VIVO_APP_KEY"   # 替换为真实的App Key
+   ```
+
+5. **启动服务**
+   ```bash
+   # 开发模式
+   go run main.go
+   
+   # 生产模式
+   go build -o bluelm
+   ./bluelm
+   ```
+
+### WhisperX服务部署
+
+1. **进入WhisperX目录**
+   ```bash
+   cd AuraLab-backend/WhisperX
+   ```
+
+2. **安装Python依赖**
+   ```bash
+   # 安装PyTorch (推荐CUDA版本)
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+   
+   # 安装其他依赖
+   pip install -r requirements.txt
+   ```
+
+3. **启动服务**
+   ```bash
+   # 开发模式
+   python app.py
+   
+   # 生产模式 (使用gunicorn)
+   pip install gunicorn
+   gunicorn -w 4 -b 0.0.0.0:5000 app:app
+   ```
+
+## 📁 项目结构
+
+```
+AuraLab-backend/
+├── BlueLM/                    # Go微服务
+│   ├── config/               # 配置管理
+│   │   └── config.go
+│   ├── handlers/             # HTTP处理器
+│   │   ├── tts_handler.go
+│   │   ├── chat_handler.go
+│   │   ├── translation_handler.go
+│   │   ├── ocr_handler.go
+│   │   └── whisperx_handler.go
+│   ├── utils/                # 工具函数
+│   │   └── logger.go
+│   ├── config.yaml           # 配置文件
+│   ├── main.go              # 服务入口
+│   └── go.mod               # Go模块定义
+├── WhisperX/                 # Python微服务
+│   ├── whisperx_service.py   # WhisperX核心服务
+│   ├── app.py               # Flask应用
+│   ├── requirements.txt     # Python依赖
+│   └── README.md            # WhisperX文档
+└── file_io/                 # 文件存储
+    ├── upload/              # 上传文件目录
+    └── download/            # 下载文件目录
+```
+
+## 🔧 配置说明
+
+### BlueLM配置 (config.yaml)
+
+```yaml
+server:
+  port: ":8888"              # 服务端口
+
+vivo_ai:
+  app_id: "YOUR_APP_ID"      # vivo AI应用ID
+  app_key: "YOUR_APP_KEY"    # vivo AI应用密钥
+
+file_paths:
+  upload_dir: "../file_io/upload/"     # 上传目录
+  download_dir: "../file_io/download/" # 下载目录
+
+whisperx:
+  url: "http://localhost:5000"         # WhisperX服务地址
+```
+
+### 环境变量配置
+
+```bash
+# BlueLM服务
+export BLUELM_PORT=8888
+export VIVO_APP_ID="your_app_id"
+export VIVO_APP_KEY="your_app_key"
+
+# WhisperX服务
+export WHISPERX_PORT=5000
+export WHISPERX_MODEL_DIR="./models"
+export CUDA_VISIBLE_DEVICES=0
+```
+
+## 📚 API文档
+
+### BlueLM API端点
+
+#### 健康检查
+```http
+GET /bluelm/health
+```
+
+#### 文字转语音
+```http
+POST /bluelm/tts
+Content-Type: application/json
+
+{
+  "text": "要转换的文本",
+  "voice": "voice_id",
+  "speed": 1.0
+}
+```
+
+#### AI对话
+```http
+POST /bluelm/chat
+Content-Type: application/json
+
+{
+  "message": "用户消息",
+  "conversation_id": "会话ID"
+}
+```
+
+#### 翻译服务
+```http
+POST /translate
+Content-Type: application/json
+
+{
+  "text": "要翻译的文本",
+  "source_lang": "zh",
+  "target_lang": "en"
+}
+```
+
+#### OCR识别
+```http
+POST /ocr
+Content-Type: multipart/form-data
+
+file: [图像文件]
+```
+
+### WhisperX API端点
+
+#### 健康检查
+```http
+GET /health
+```
+
+#### 获取支持的模型
+```http
+GET /whisperx/models
+```
+
+#### 音频处理
+```http
+POST /whisperx/process
+Content-Type: multipart/form-data
+
+file: [音频文件]
+enable_word_timestamps: true
+enable_speaker_diarization: false
+model_name: small
+language: zh
+```
+
+#### 查询任务状态
+```http
+GET /whisperx/status/{task_id}
+```
+
+#### 下载处理结果
+```http
+GET /whisperx/download/{task_id}/{file_type}
+```
+
+## 🔍 支持的模型
+
+### WhisperX模型
+- **tiny**: 最快速度，较低精度
+- **base**: 平衡速度和精度
+- **small**: 推荐用于大多数场景
+- **medium**: 更高精度，较慢速度
+- **large**: 最高精度，最慢速度
+- **turbo**: 优化版本，速度和精度平衡
+
+### 支持的音频格式
+- WAV, MP3, MP4, AVI, MOV, FLAC, M4A
+- 采样率: 16kHz推荐
+- 最大文件大小: 100MB
+
+## 🐛 故障排除
+
+### 常见问题
+
+1. **BlueLM服务启动失败**
+   ```bash
+   # 检查端口占用
+   netstat -tulpn | grep 8888
+   
+   # 检查配置文件
+   go run main.go --config-check
+   ```
+
+2. **WhisperX模型下载失败**
+   ```bash
+   # 手动下载模型
+   python -c "import whisperx; whisperx.load_model('small')"
+   
+   # 设置代理
+   export HF_ENDPOINT=https://hf-mirror.com
+   ```
+
+3. **CUDA内存不足**
+   ```bash
+   # 使用CPU模式
+   export CUDA_VISIBLE_DEVICES=""
+   
+   # 或使用较小模型
+   # model_name: "tiny" 或 "base"
+   ```
+
+4. **权限问题**
+   ```bash
+   # 确保文件目录权限
+   chmod -R 755 file_io/
+   chown -R $USER:$USER file_io/
+   ```
+
+### 性能优化
+
+1. **GPU加速**
+   - 安装CUDA和cuDNN
+   - 使用GPU版本的PyTorch
+   - 设置适当的batch_size
+
+2. **内存优化**
+   - 使用较小的模型
+   - 启用模型量化
+   - 限制并发处理数量
+
+3. **网络优化**
+   - 使用CDN加速模型下载
+   - 配置适当的超时时间
+   - 启用gzip压缩
+
+## 🔒 安全配置
+
+### API安全
+- 配置CORS策略
+- 实施请求频率限制
+- 添加API密钥验证
+- 启用HTTPS
+
+### 文件安全
+- 限制上传文件类型
+- 设置文件大小限制
+- 定期清理临时文件
+- 扫描恶意文件
+
+## 📊 监控和日志
+
+### 日志配置
+```go
+// BlueLM日志级别
+utils.Log.SetLevel(logrus.InfoLevel)
+```
+
+### 监控指标
+- API响应时间
+- 错误率统计
+- 资源使用情况
+- 并发连接数
+
+## 🚀 部署指南
+
+### Docker部署
+
+1. **构建镜像**
+   ```bash
+   # BlueLM服务
+   docker build -t auralab-bluelm ./BlueLM
+   
+   # WhisperX服务
+   docker build -t auralab-whisperx ./WhisperX
+   ```
+
+2. **运行容器**
+   ```bash
+   # 使用docker-compose
+   docker-compose up -d
+   ```
+
+### 生产环境部署
+
+1. **使用反向代理**
+   ```nginx
+   # Nginx配置示例
+   upstream bluelm {
+       server localhost:8888;
+   }
+   
+   upstream whisperx {
+       server localhost:5000;
+   }
+   
+   server {
+       listen 80;
+       server_name api.auralab.com;
+       
+       location /bluelm/ {
+           proxy_pass http://bluelm;
+       }
+       
+       location /whisperx/ {
+           proxy_pass http://whisperx;
+       }
+   }
+   ```
+
+2. **进程管理**
+   ```bash
+   # 使用systemd管理服务
+   sudo systemctl enable auralab-bluelm
+   sudo systemctl enable auralab-whisperx
+   ```
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🤝 贡献
+
+欢迎提交Issue和Pull Request来改进项目！
+
+### 开发指南
+1. Fork项目
+2. 创建功能分支
+3. 提交更改
+4. 创建Pull Request
+
+## 📞 联系我们
+
+- 项目主页: [GitHub Repository]
+- 问题反馈: [GitHub Issues]
+- 技术支持: [your-email@example.com]
+
+## 🙏 致谢
+
+特别感谢以下开源项目和服务：
+
+- [WhisperX](https://github.com/m-bain/whisperX) - 高精度语音识别
+- [Gin](https://github.com/gin-gonic/gin) - Go Web框架
+- [Flask](https://flask.palletsprojects.com/) - Python Web框架
+- [vivo AI平台](https://ai.vivo.com/) - AI服务支持
+- [PyTorch](https://pytorch.org/) - 深度学习框架
+- [HuggingFace](https://huggingface.co/) - AI模型和工具
+
+---
+
+**AuraLab Backend Team** © 2025
 
 ## 概述
 
