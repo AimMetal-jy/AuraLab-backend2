@@ -41,6 +41,7 @@ func main() {
 	ginServer.POST("/bluelm/tts", handlers.TTSHandler(app, cfg))
 	ginServer.POST("/bluelm/transcription", handlers.TranscriptionHandler(app, cfg))
 	ginServer.POST("/bluelm/chat", handlers.ChatHandler(app, cfg))
+	ginServer.POST("/bluelm/chat/multimodal", handlers.MultimodalChatHandler(app, cfg))
 	ginServer.POST("/whisperx", handlers.WhisperXHandler(cfg))
 	ginServer.GET("/bluelm/transcription/status/:task_id", handlers.TranscriptionStatusHandler(cfg))
 	ginServer.GET("/bluelm/transcription/download/:task_id", handlers.TranscriptionDownloadHandler(cfg))
