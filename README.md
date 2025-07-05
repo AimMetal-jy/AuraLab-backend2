@@ -9,9 +9,8 @@ AuraLab Backend是一个基于微服务架构的AI音频处理后端系统，集
 1. **安装Go环境**
    ```bash
    # 下载并安装Go 1.24.1+
-   wget https://golang.org/dl/go1.24.1.linux-amd64.tar.gz
-   sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
-   export PATH=$PATH:/usr/local/go/bin
+   # 设置Go国内代理
+   go env -w GOPROXY=https://goproxy.cn,direct
    ```
 
 2. **安装Python环境**
@@ -22,18 +21,10 @@ AuraLab Backend是一个基于微服务架构的AI音频处理后端系统，集
    # 进入whisperx文件夹下安装第三方包依赖
    pip install -r requirements.txt
    ```
-   
-3. **安装系统依赖**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt update
-   sudo apt install ffmpeg libcudnn8 libcudnn8-dev
-   
-   # macOS
-   brew install ffmpeg
-   
-   # Windows (例如通过chocolatey下载ffmpeg)
-   ```
+
+3. **安装工具依赖**
+
+   ffmpeg
 
 4. **显存加速whisper模型需要自行安装CUDA、cuDNN、Pytorch-CUDA版**
 
@@ -52,19 +43,24 @@ AuraLab Backend是一个基于微服务架构的AI音频处理后端系统，集
    go mod tidy
    ```
 
-3. **配置服务**
-   
+3. **配置后端URL和端口服务**
+
    编辑配置文件 config.yaml
-   
+
 4. **配置vivo AI凭据**
-   
+
    ```yaml
+   # 配置环境变量APPID和APPKEY
+   
+   # 或配置config.yaml文件
+   config.yaml:
    vivo_ai:
      app_id: "YOUR_VIVO_APP_ID"     # 替换为真实的App ID
      app_key: "YOUR_VIVO_APP_KEY"   # 替换为真实的App Key
    ```
-   
+
 5. **启动服务**
+
    ```bash
    # 开发模式
    go run main.go
@@ -83,7 +79,7 @@ AuraLab Backend是一个基于微服务架构的AI音频处理后端系统，集
 
 2. **安装Python依赖**
    ```bash
-   # 安装PyTorch (推荐CUDA版本)
+   # 安装PyTorch (CUDA版本)
    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
    
    # 安装其他依赖
@@ -94,10 +90,6 @@ AuraLab Backend是一个基于微服务架构的AI音频处理后端系统，集
    ```bash
    # 开发模式
    python app.py
-   
-   # 生产模式 (使用gunicorn)
-   pip install gunicorn
-   gunicorn -w 4 -b 0.0.0.0:5000 app:app
    ```
 
 
@@ -123,7 +115,7 @@ whisperx:
 
 ### 环境变量配置
 
-在运行服务之前，请确保设置了以下环境变量：
+在运行服务之前，请确保设置了以下环境变量（或通过前端设置）：
 
 ```bash
 # HuggingFace Token (用于 WhisperX 模型下载)
@@ -137,8 +129,6 @@ export VIVO_APP_KEY="your_app_key"
 
 # WhisperX服务
 export WHISPERX_PORT=5000
-export WHISPERX_MODEL_DIR="./models"
-export CUDA_VISIBLE_DEVICES=0
 ```
 **配置优先级说明：**
 
@@ -156,13 +146,7 @@ export CUDA_VISIBLE_DEVICES=0
 ### 常见问题
 
 1. **BlueLM服务启动失败**
-   ```bash
-   # 检查端口占用
-   netstat -tulpn | grep 8888
-   
-   # 检查配置文件
-   go run main.go --config-check
-   ```
+   检查端口占用等
 
 2. **WhisperX模型下载失败**
    ```bash
@@ -181,11 +165,3 @@ export CUDA_VISIBLE_DEVICES=0
    # 或使用较小模型
    # model_name: "tiny" 或 "base"
    ```
-
-4. **权限问题**
-   ```bash
-   # 确保文件目录权限
-   chmod -R 755 file_io/
-   chown -R $USER:$USER file_io/
-   ```
-
